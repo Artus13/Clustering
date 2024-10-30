@@ -5,13 +5,18 @@ import time
 from scipy.io import arff
 from sklearn import cluster
 from sklearn import metrics
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import davies_bouldin_score
+from sklearn.metrics import calinski_harabasz_score
+from kneed import KneeLocator
+import pretty_errors
 
 
 ###################################################################
 # Exemple : Agglomerative Clustering
 
 
-path = './artificial/'
+path = '../artificial/'
 name="xclara.arff"
 
 #path_out = './fig/'
@@ -75,6 +80,114 @@ plt.scatter(f0, f1, c=labels, s=8)
 plt.title("Clustering agglomératif (average, n_cluster= "+str(k)+") "+str(name))
 plt.show()
 print("nb clusters =",kres,", nb feuilles = ", leaves, " runtime = ", round((tps2 - tps1)*1000,2),"ms")
+
+
+#####################################
+#Methode du coude 
+inerties_list = []
+k_list = []
+for k in range (1,50):
+    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
+    model.fit(datanp)
+    labels = model.labels_
+    inertie = model.inertia_
+    inerties_list.append(inertie)
+    k_list.append(k)
+coude = KneeLocator(k_list, inerties_list, curve = "convex", direction = "decreasing").elbow
+plt.plot(k_list, inerties_list, marker='o')
+plt.axvline(x=coude, linestyle='--', color='red', label=f'Coude à k={coude}')
+plt.title("Méthode du coude")
+plt.xlabel("Nombre de clusters k ")
+plt.ylabel("Inertie")
+plt.legend()
+plt.show()
+print(f'Coude à k={coude}')
+
+#Methode silhouette
+silhouette_list = []
+k_list = []
+for k in range (2,50):
+    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
+    model.fit(datanp)
+    labels = model.labels_
+    # informations sur le clustering obtenu
+    score = silhouette_score(datanp, labels)
+    silhouette_list.append(score)
+    k_list.append(k)
+k_opt = k_list[np.argmax(silhouette_list)]
+plt.plot(k_list, silhouette_list, marker='o')
+plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
+plt.title("Méthode Silhouette")
+plt.xlabel("Nombre de clusters k ")
+plt.ylabel("Score de silhouette")
+plt.legend()
+plt.show()
+print(f'Optimal à k={k_opt}')
+
+#Methode Davies-Bouldin
+db_list = []
+k_list = []
+for k in range (2,50):
+    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
+    model.fit(datanp)
+    labels = model.labels_
+    # informations sur le clustering obtenu
+    score = davies_bouldin_score(datanp, labels)
+    db_list.append(score)
+    k_list.append(k)
+k_opt = k_list[np.argmin(db_list)]
+plt.plot(k_list, db_list, marker='o')
+plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
+plt.title("Méthode Davies-Bouldin")
+plt.xlabel("Nombre de clusters k ")
+plt.ylabel("Score de Davies-Bouldin")
+plt.legend()
+plt.show()
+print(f'Optimal à k={k_opt}')
+
+#Methode Calinski-Harabasz
+ch_list = []
+k_list = []
+for k in range (2,50):
+    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
+    model.fit(datanp)
+    labels = model.labels_
+    # informations sur le clustering obtenu
+    score = calinski_harabasz_score(datanp, labels)
+    ch_list.append(score)
+    k_list.append(k)
+k_opt = k_list[np.argmax(ch_list)]
+plt.plot(k_list, ch_list, marker='o')
+plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
+plt.title("Méthode Calinski-Harabasz")
+plt.xlabel("Nombre de clusters k ")
+plt.ylabel("Score de Calinski-Harabasz")
+plt.legend()
+plt.show()
+print(f'Optimal à k={k_opt}')
+
+#Methode RunTime
+runtime_list = []
+k_list = []
+for k in range (1,50):
+    tps1 = time.time()
+    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
+    model.fit(datanp)
+    labels = model.labels_
+    tps2 = time.time()
+    # informations sur le clustering obtenu
+    runtime = round((tps2 - tps1)*1000,2)
+    runtime_list.append(runtime)
+    k_list.append(k)
+k_opt = k_list[np.argmin(runtime_list)]
+plt.plot(k_list, runtime_list, marker='o')
+plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
+plt.title("Méthode RunTime")
+plt.xlabel("Nombre de clusters k ")
+plt.ylabel("RunTime")
+plt.legend()
+plt.show()
+print(f'Optimal à k={k_opt}')
 
 
 

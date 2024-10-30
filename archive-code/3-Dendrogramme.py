@@ -12,7 +12,7 @@ from scipy.cluster.hierarchy import dendrogram
 
 
 
-path = './artificial/'
+path = '../artificial/'
 name="xclara.arff"
 
 #path_out = './fig/'
