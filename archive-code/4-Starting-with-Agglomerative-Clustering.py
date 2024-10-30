@@ -17,7 +17,7 @@ import pretty_errors
 
 
 path = '../artificial/'
-name="xclara.arff"
+name="rings.arff"
 
 #path_out = './fig/'
 databrut = arff.loadarff(open(path+str(name), 'r'))
@@ -82,113 +82,51 @@ plt.show()
 print("nb clusters =",kres,", nb feuilles = ", leaves, " runtime = ", round((tps2 - tps1)*1000,2),"ms")
 
 
-#####################################
-#Methode du coude 
-inerties_list = []
-k_list = []
-for k in range (1,50):
-    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
-    model.fit(datanp)
-    labels = model.labels_
-    inertie = model.inertia_
-    inerties_list.append(inertie)
-    k_list.append(k)
-coude = KneeLocator(k_list, inerties_list, curve = "convex", direction = "decreasing").elbow
-plt.plot(k_list, inerties_list, marker='o')
-plt.axvline(x=coude, linestyle='--', color='red', label=f'Coude à k={coude}')
-plt.title("Méthode du coude")
-plt.xlabel("Nombre de clusters k ")
-plt.ylabel("Inertie")
-plt.legend()
-plt.show()
-print(f'Coude à k={coude}')
-
-#Methode silhouette
-silhouette_list = []
-k_list = []
-for k in range (2,50):
-    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
-    model.fit(datanp)
-    labels = model.labels_
-    # informations sur le clustering obtenu
-    score = silhouette_score(datanp, labels)
-    silhouette_list.append(score)
-    k_list.append(k)
-k_opt = k_list[np.argmax(silhouette_list)]
-plt.plot(k_list, silhouette_list, marker='o')
-plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
-plt.title("Méthode Silhouette")
-plt.xlabel("Nombre de clusters k ")
-plt.ylabel("Score de silhouette")
-plt.legend()
-plt.show()
-print(f'Optimal à k={k_opt}')
-
-#Methode Davies-Bouldin
-db_list = []
-k_list = []
-for k in range (2,50):
-    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
-    model.fit(datanp)
-    labels = model.labels_
-    # informations sur le clustering obtenu
-    score = davies_bouldin_score(datanp, labels)
-    db_list.append(score)
-    k_list.append(k)
-k_opt = k_list[np.argmin(db_list)]
-plt.plot(k_list, db_list, marker='o')
-plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
-plt.title("Méthode Davies-Bouldin")
-plt.xlabel("Nombre de clusters k ")
-plt.ylabel("Score de Davies-Bouldin")
-plt.legend()
-plt.show()
-print(f'Optimal à k={k_opt}')
-
-#Methode Calinski-Harabasz
-ch_list = []
-k_list = []
-for k in range (2,50):
-    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
-    model.fit(datanp)
-    labels = model.labels_
-    # informations sur le clustering obtenu
-    score = calinski_harabasz_score(datanp, labels)
-    ch_list.append(score)
-    k_list.append(k)
-k_opt = k_list[np.argmax(ch_list)]
-plt.plot(k_list, ch_list, marker='o')
-plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
-plt.title("Méthode Calinski-Harabasz")
-plt.xlabel("Nombre de clusters k ")
-plt.ylabel("Score de Calinski-Harabasz")
-plt.legend()
-plt.show()
-print(f'Optimal à k={k_opt}')
-
-#Methode RunTime
-runtime_list = []
-k_list = []
-for k in range (1,50):
-    tps1 = time.time()
-    model = cluster.KMeans(n_clusters=k, init='k-means++', n_init=1)
-    model.fit(datanp)
-    labels = model.labels_
-    tps2 = time.time()
-    # informations sur le clustering obtenu
-    runtime = round((tps2 - tps1)*1000,2)
-    runtime_list.append(runtime)
-    k_list.append(k)
-k_opt = k_list[np.argmin(runtime_list)]
-plt.plot(k_list, runtime_list, marker='o')
-plt.axvline(x=k_opt, linestyle='--', color='red', label=f'Optimal à k={k_opt}')
-plt.title("Méthode RunTime")
-plt.xlabel("Nombre de clusters k ")
-plt.ylabel("RunTime")
-plt.legend()
-plt.show()
-print(f'Optimal à k={k_opt}')
-
-
-
 #######################################################################
+
+def evaluate_clustering(datanp, max_clusters=10):
+    results = []
+    
+    # Tester plusieurs nombres de clusters
+    for k in range(2, max_clusters+1):
+        start_time = time.time()
+        
+        # Modèle de clustering agglomératif
+        model = cluster.AgglomerativeClustering(linkage='average', n_clusters=k)
+        labels = model.fit_predict(datanp)
+        
+        # Temps de calcul
+        runtime = time.time() - start_time
+        
+        # Calcul des métriques
+        silhouette = silhouette_score(datanp, labels)
+        davies_bouldin = davies_bouldin_score(datanp, labels)
+        calinski_harabasz = calinski_harabasz_score(datanp, labels)
+        
+        # Stocker les résultats
+        results.append({
+            'k': k,
+            'silhouette': silhouette,
+            'davies_bouldin': davies_bouldin,
+            'calinski_harabasz': calinski_harabasz,
+            'runtime': runtime
+        })
+        
+        # Affichage du clustering
+        plt.scatter(datanp[:, 0], datanp[:, 1], c=labels, s=8)
+        plt.title(f"Clustering agglomératif avec k={k}")
+        plt.show()
+    
+    # Choisir le meilleur nombre de clusters en fonction de l'indice de silhouette (par exemple)
+    best_k = max(results, key=lambda x: x['silhouette'])['k']
+    print(f"Nombre de clusters optimal selon l'indice de silhouette: {best_k}")
+
+    # Affichage des résultats pour chaque k
+    for result in results:
+        print(f"Clusters: {result['k']}, Silhouette: {result['silhouette']:.4f}, "
+              f"Davies-Bouldin: {result['davies_bouldin']:.4f}, "
+              f"Calinski-Harabasz: {result['calinski_harabasz']:.4f}, "
+              f"Runtime: {result['runtime']:.4f} sec")
+
+# Appel de la fonction pour évaluer le clustering
+evaluate_clustering(datanp, max_clusters=10)
