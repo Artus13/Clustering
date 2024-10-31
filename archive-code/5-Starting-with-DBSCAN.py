@@ -63,14 +63,14 @@ plt.show()
 ##################################################################
 # 5.3 Exécution du clustering DBSCAN avec évaluation des métriques
 
-# Paramètres DBSCAN (à ajuster si besoin après la méthode du coude)
-epsilon = 0.05  # Valeur indicative, à ajuster en fonction du coude
-min_pts = 5
+# Paramètres DBSCAN
+epsilon = 0.05  
+min_samples = 5
 
 # Clustering DBSCAN
-print("Appel DBSCAN avec eps = ", epsilon, "et min_samples = ", min_pts)
+print("Appel DBSCAN avec eps = ", epsilon, "et min_samples = ", min_samples)
 start_time = time.time()
-model = cluster.DBSCAN(eps=epsilon, min_samples=min_pts)
+model = cluster.DBSCAN(eps=epsilon, min_samples=min_samples)
 model.fit(data_scaled)
 run_time = time.time() - start_time
 
@@ -78,7 +78,7 @@ labels = model.labels_
 n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 n_noise = list(labels).count(-1)
 
-# Calcul des métriques si plusieurs clusters sont détectés
+# Calcul des métriques 
 if n_clusters > 1:
     silhouette_avg = silhouette_score(data_scaled, labels)
     calinski_harabasz = calinski_harabasz_score(data_scaled, labels)
@@ -95,5 +95,5 @@ print(f"Temps d'exécution : {run_time:.4f} secondes")
 
 # Visualisation des clusters
 plt.scatter(data_scaled[:, 0], data_scaled[:, 1], c=labels, s=8, cmap='viridis')
-plt.title(f"Clustering DBSCAN - eps={epsilon}, MinPts={min_pts}")
+plt.title(f"Clustering DBSCAN - eps={epsilon}, MinPts={min_samples}")
 plt.show()
