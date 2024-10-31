@@ -1,100 +1,99 @@
+"""
+Created on 2023/09/11
+
+@author: huguet
+"""
+import os
+os.environ["OMP_NUM_THREADS"] = '4'
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-
 from scipy.io import arff
 from sklearn import cluster
-from sklearn import metrics
 from sklearn.neighbors import NearestNeighbors
 from sklearn import preprocessing
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
 ##################################################################
-# Exemple : DBSCAN Clustering
+# Chargement des données
 
+path = '../artificial/'
+name = "banana.arff"
+databrut = arff.loadarff(open(path + str(name), 'r'))
+datanp = np.array([[x[0], x[1]] for x in databrut[0]])
 
-path = './artificial/'
-name="xclara.arff"
-
-#path_out = './fig/'
-databrut = arff.loadarff(open(path+str(name), 'r'))
-datanp = np.array([[x[0],x[1]] for x in databrut[0]])
-
-# PLOT datanp (en 2D) - / scatter plot
-# Extraire chaque valeur de features pour en faire une liste
-# EX : 
-# - pour t1=t[:,0] --> [1, 3, 5, 7]
-# - pour t2=t[:,1] --> [2, 4, 6, 8]
-print("---------------------------------------")
-print("Affichage données initiales            "+ str(name))
-f0 = datanp[:,0] # tous les élements de la première colonne
-f1 = datanp[:,1] # tous les éléments de la deuxième colonne
-
-#plt.figure(figsize=(6, 6))
+# Visualisation des données initiales
+print("Affichage des données initiales : " + str(name))
+f0 = datanp[:, 0]  # Première colonne
+f1 = datanp[:, 1]  # Deuxième colonne
 plt.scatter(f0, f1, s=8)
-plt.title("Donnees initiales : "+ str(name))
-#plt.savefig(path_out+"Plot-kmeans-code1-"+str(name)+"-init.jpg",bbox_inches='tight', pad_inches=0.1)
+plt.title("Données initiales : " + str(name))
 plt.show()
 
-
-# Run DBSCAN clustering method 
-# for a given number of parameters eps and min_samples
-# 
-print("------------------------------------------------------")
-print("Appel DBSCAN (1) ... ")
-tps1 = time.time()
-epsilon=2 #2  # 4
-min_pts= 5 #10   # 10
-model = cluster.DBSCAN(eps=epsilon, min_samples=min_pts)
-model.fit(datanp)
-tps2 = time.time()
-labels = model.labels_
-
-# Number of clusters in labels, ignoring noise if present.
-n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-n_noise = list(labels).count(-1)
-print('Number of clusters: %d' % n_clusters)
-print('Number of noise points: %d' % n_noise)
-
-plt.scatter(f0, f1, c=labels, s=8)
-plt.title("Données après clustering DBSCAN (1) - Epislon= "+str(epsilon)+" MinPts= "+str(min_pts))
-plt.show()
-
-
-####################################################
-# Standardisation des donnees
-
+##################################################################
+# Standardisation des données
 scaler = preprocessing.StandardScaler().fit(datanp)
 data_scaled = scaler.transform(datanp)
-print("Affichage données standardisées            ")
-f0_scaled = data_scaled[:,0] # tous les élements de la première colonne
-f1_scaled = data_scaled[:,1] # tous les éléments de la deuxième colonne
-
-#plt.figure(figsize=(10, 10))
+f0_scaled = data_scaled[:, 0]
+f1_scaled = data_scaled[:, 1]
 plt.scatter(f0_scaled, f1_scaled, s=8)
-plt.title("Donnees standardisées")
+plt.title("Données standardisées")
 plt.show()
 
+##################################################################
+# 5.2 Méthode du coude pour déterminer le paramètre eps
 
-print("------------------------------------------------------")
-print("Appel DBSCAN (2) sur données standardisees ... ")
-tps1 = time.time()
-epsilon=0.05 #0.05
-min_pts=5 # 10
+k = 5  # Nombre de voisins
+neigh = NearestNeighbors(n_neighbors=k)
+neigh.fit(data_scaled)
+distances, _ = neigh.kneighbors(data_scaled)
+# Calcul des distances moyennes aux k plus proches voisins
+newDistances = np.asarray([np.mean(distances[i][1:]) for i in range(distances.shape[0])])
+distancetrie = np.sort(newDistances)
+
+# Affichage de la courbe des k-plus proches voisins
+plt.title(f"Méthode du coude pour k={k} plus proches voisins")
+plt.plot(distancetrie)
+plt.xlabel("Points")
+plt.ylabel("Distance moyenne aux k plus proches voisins")
+plt.show()
+
+##################################################################
+# 5.3 Exécution du clustering DBSCAN avec évaluation des métriques
+
+# Paramètres DBSCAN (à ajuster si besoin après la méthode du coude)
+epsilon = 0.05  # Valeur indicative, à ajuster en fonction du coude
+min_pts = 5
+
+# Clustering DBSCAN
+print("Appel DBSCAN avec eps = ", epsilon, "et min_samples = ", min_pts)
+start_time = time.time()
 model = cluster.DBSCAN(eps=epsilon, min_samples=min_pts)
 model.fit(data_scaled)
+run_time = time.time() - start_time
 
-tps2 = time.time()
 labels = model.labels_
-# Number of clusters in labels, ignoring noise if present.
 n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 n_noise = list(labels).count(-1)
-print('Number of clusters: %d' % n_clusters)
-print('Number of noise points: %d' % n_noise)
 
-plt.scatter(f0_scaled, f1_scaled, c=labels, s=8)
-plt.title("Données après clustering DBSCAN (2) - Epislon= "+str(epsilon)+" MinPts= "+str(min_pts))
+# Calcul des métriques si plusieurs clusters sont détectés
+if n_clusters > 1:
+    silhouette_avg = silhouette_score(data_scaled, labels)
+    calinski_harabasz = calinski_harabasz_score(data_scaled, labels)
+    davies_bouldin = davies_bouldin_score(data_scaled, labels)
+
+    print(f"Indice de silhouette : {silhouette_avg:.4f}")
+    print(f"Indice de Calinski-Harabasz : {calinski_harabasz:.4f}")
+    print(f"Indice de Davies-Bouldin : {davies_bouldin:.4f}")
+
+# Affichage des résultats
+print(f"Nombre de clusters : {n_clusters}")
+print(f"Nombre de points de bruit : {n_noise}")
+print(f"Temps d'exécution : {run_time:.4f} secondes")
+
+# Visualisation des clusters
+plt.scatter(data_scaled[:, 0], data_scaled[:, 1], c=labels, s=8, cmap='viridis')
+plt.title(f"Clustering DBSCAN - eps={epsilon}, MinPts={min_pts}")
 plt.show()
-
-
-
-

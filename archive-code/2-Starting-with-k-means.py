@@ -23,7 +23,7 @@ import pretty_errors
 # Exemple :  k-Means Clustering
 
 path = '../artificial/'
-name="xclara.arff"
+name="cluto-t8-8k.arff"
 
 #path_out = './fig/'
 databrut = arff.loadarff(open(path+str(name), 'r'))
